@@ -1,0 +1,18 @@
+{
+  "name": "bdrb-stats",
+  "version": "0.0.0",
+  "description": "A follower for the BIG_DICK_RICK_BOT on r/BostonBruins and r/Rangers",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "William Klausmeyer",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.3",
+    "knex": "^0.14.4",
+    "mysql": "^2.15.0",
+    "node-fetch": "^2.1.2",
+    "snoowrap": "^1.15.2"
+  }
+}

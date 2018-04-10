@@ -1,0 +1,254 @@
+<html>
+<head>
+  <title>Big Dick Rick's Big Dick</title>
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+  google.charts.load('current', {'packages':['corechart']});
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">Rick Nash's Giant Dong in the 2017/18 Season</h1>
+    <div class="col-xs-12">
+      <h2 class="text-center">Graph</h2>
+      <div id="date-chart"></div>
+    </div>
+    <div class="col-xs-12">
+      <h2 class="text-center">Charts</h2>
+      <div id="subreddit-chart" style="width:50%;"></div>
+      <div id="user-comment-chart" style="height:600px;"></div>
+      <div id="user-post-chart" style="height:600px;"></div>
+      <div id="date-top-chart" style="height:600px;"></div>
+    </div>
+    <div class="col-xs-12">
+      <h2 class="text-center">Top Posts</h2>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Title</th>
+            <th>Subreddit</th>
+            <th>Poster</th>
+            <th>Date</th>
+            <th>Inches</th>
+          </tr>
+        </thead>
+        <tbody id="post-table"></tbody>
+      </table>
+    </div>
+    <div class="col-xs-12">
+      <h2 class="text-center">Top Days of Growth</h2>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Date</th>
+            <th>Rangers Inches</th>
+            <th>Bruins Inches</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="date-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  var tables = {
+    date: document.getElementById('date-table'),
+    post: document.getElementById('post-table')
+  };
+  var charts = {
+    date: document.getElementById('date-chart'),
+    subreddit: document.getElementById('subreddit-chart'),
+    userComment: document.getElementById('user-comment-chart'),
+    userPost: document.getElementById('user-post-chart'),
+    dateTop: document.getElementById('date-top-chart'),
+  };
+  var dayInMs = 86400000;
+  var formatter;
+
+  google.charts.setOnLoadCallback(() => {
+    formatter = new google.visualization.NumberFormat({
+      fractionDigits: 0,
+    });
+
+    fetch('/api/v1/dates/comment/top')
+      .then((data) => data.json())
+      .then((data) => {
+        var options = {
+          title: 'Top Days by Inches Grown',
+          legend: {
+            position: 'none'
+          },
+          chartArea: {
+            height: '80%',
+          },
+          isStacked: true,
+          focusTarget: 'category',
+          colors: [ '#0038A8', '#FCB514' ],
+        };
+        var chartData = google.visualization.arrayToDataTable(data);
+        var chart = new google.visualization.BarChart(charts.dateTop);
+        chart.draw(chartData, options);
+
+        return data;
+      })
+      .then((data) => data.map((row, index) => {
+        if (index === 0) {
+          return;
+        }
+        tables.date.innerHTML = tables.date.innerHTML + `<tr>
+          <td>#${index}</td>
+          <td>${row[0]}</td>
+          <td class="text-right">${formatter.formatValue(row[1])}</td>
+          <td class="text-right">${formatter.formatValue(row[2])}</td>
+          <td class="text-right">${formatter.formatValue(row[2] + row[1])}</td>
+        </tr>`;
+      }));
+
+    fetch('/api/v1/posts/top')
+      .then((data) => data.json())
+      .then((data) => data.map((row) => {
+        tables.post.innerHTML = tables.post.innerHTML + `<tr>
+          <td>#${row[0]}</td>
+          <td>${row[1]}</td>
+          <td>${row[2]}</td>
+          <td>${row[3]}</td>
+          <td>${row[4]}</td>
+          <td class="text-right">${formatter.formatValue(row[5])}</td>
+        </tr>`;
+      }));
+
+    fetch('/api/v1/dates/comment')
+      .then((data) => data.json())
+      .then((data) => {
+        var chartArray = [
+          ['Date', 'In. Gained', 'Length']
+        ];
+        var currentLength = 0;
+        var lastDate = null;
+
+        data.map((row) => {
+          // Make the date object
+          var rowDate = new Date(row.date);
+
+          // Determine if there is an old date to compare to
+          if (lastDate !== null && (rowDate.getTime() - lastDate.getTime()) > dayInMs) {
+            for (
+              var fillerDate = lastDate.getTime() + dayInMs;
+              fillerDate < rowDate.getTime();
+              fillerDate += dayInMs
+            ) {
+              chartArray.push([
+                (new Date(fillerDate)).toISOString().split('T')[0],
+                0,
+                currentLength
+              ]);
+            }
+          }
+
+          // Save the current length and date
+          lastDate = rowDate;
+          currentLength = row.max_length;
+
+          // Add to the array
+          chartArray.push([
+            row.date,
+            row.inches,
+            currentLength
+          ]);
+        });
+
+        var chartData = google.visualization.arrayToDataTable(chartArray);
+        var options = {
+          title: 'Dick Size by Day',
+          series: {
+            0: {
+              targetAxisIndex: 0,
+              type: 'bars'
+            },
+            1: {
+              targetAxisIndex: 1,
+            }
+          },
+          height: 400,
+          vAxes: {
+            // Adds titles to each axis.
+            0: {
+              title: 'In. Grown',
+            },
+            1: {
+              title: 'Total Length',
+            }
+          },
+          focusTarget: 'category',
+        };
+        var chart = new google.visualization.LineChart(charts.date);
+        chart.draw(chartData, options);
+      });
+
+    fetch('/api/v1/subreddit')
+      .then((data) => data.json())
+      .then((data) => google.visualization.arrayToDataTable(data))
+      .then((data) => {
+        var options = {
+          title: 'Inches Grown by Subreddit',
+          chartArea: {
+            height: '80%',
+          },
+          focusTarget: 'category',
+          colors: [ '#FCB514', '#0038A8' ],
+        };
+        var chart = new google.visualization.PieChart(charts.subreddit);
+        chart.draw(data, options);
+      });
+
+    fetch('/api/v1/users/comments/top')
+      .then((data) => data.json())
+      .then((data) => google.visualization.arrayToDataTable(data))
+      .then((data) => {
+        var options = {
+          title: 'Top 10 Users by Comments',
+          legend: {
+            position: 'none'
+          },
+          chartArea: {
+            height: '80%',
+          },
+          colors: [ '#0038A8', '#FCB514' ],
+          isStacked: true,
+          focusTarget: 'category',
+        };
+        var chart = new google.visualization.BarChart(charts.userComment);
+        chart.draw(data, options);
+      });
+
+    fetch('/api/v1/users/posts/top')
+      .then((data) => data.json())
+      .then((data) => google.visualization.arrayToDataTable(data))
+      .then((data) => {
+        var options = {
+          title: 'Top 10 Users by Posts',
+          legend: {
+            position: 'none'
+          },
+          chartArea: {
+            height: '80%',
+          },
+          isStacked: true,
+          focusTarget: 'category',
+          colors: [ '#0038A8', '#FCB514' ],
+        };
+        var chart = new google.visualization.BarChart(charts.userPost);
+        chart.draw(data, options);
+      });
+  });
+  </script>
+</body>
+</html>
