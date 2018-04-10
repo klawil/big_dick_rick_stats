@@ -10,6 +10,17 @@
   <script>
   google.charts.load('current', {'packages':['corechart']});
   </script>
+
+  <style>
+  .BostonBruins {
+    background-color: #FCB514;
+    color: #000;
+  }
+  .rangers {
+    background-color: #0038A8;
+    color: #FFF;
+  }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -27,7 +38,7 @@
     </div>
     <div class="col-xs-12">
       <h2 class="text-center">Top Posts</h2>
-      <table class="table table-striped">
+      <table class="table">
         <thead>
           <tr>
             <th>Rank</th>
@@ -43,7 +54,7 @@
     </div>
     <div class="col-xs-12">
       <h2 class="text-center">Top Days of Growth</h2>
-      <table class="table table-striped">
+      <table class="table">
         <thead>
           <tr>
             <th>Rank</th>
@@ -103,7 +114,16 @@
         if (index === 0) {
           return;
         }
-        tables.date.innerHTML = tables.date.innerHTML + `<tr>
+        var rowClass;
+        if (row[2] > 0 && row[1] > 0) {
+          rowClass = 'both';
+        } else if (row[1] > 0) {
+          rowClass = 'rangers';
+        } else if (row[2] > 0) {
+          rowClass = 'BostonBruins';
+        }
+
+        tables.date.innerHTML = tables.date.innerHTML + `<tr class="${rowClass}">
           <td>#${index}</td>
           <td>${row[0]}</td>
           <td class="text-right">${formatter.formatValue(row[1])}</td>
@@ -115,7 +135,7 @@
     fetch('/api/v1/posts/top')
       .then((data) => data.json())
       .then((data) => data.map((row) => {
-        tables.post.innerHTML = tables.post.innerHTML + `<tr>
+        tables.post.innerHTML = tables.post.innerHTML + `<tr class="${row[2]}">
           <td>#${row[0]}</td>
           <td>${row[1]}</td>
           <td>${row[2]}</td>
