@@ -59,7 +59,7 @@ app.get('/api/v1/dates/comment', (req, res) => {
       knex.raw('MAX(length) as max_length')
     )
     .then(rowsParser)
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/dates/post', (req, res) => {
@@ -76,7 +76,7 @@ app.get('/api/v1/dates/post', (req, res) => {
       knex.raw('DATE(CONVERT_TZ(posts.created, "+00:00", "-04:00")) as date')
     )
     .then(rowsParser)
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/dates/comment/top', (req, res) => {
@@ -111,7 +111,7 @@ app.get('/api/v1/dates/comment/top', (req, res) => {
     )
     .then(rowsParser)
     .then((data) => [['Date', 'Rangers Inches', 'Bruins Inches']].concat(data.map((row) => [row.date, row.rangers_inches, row.bruins_inches])))
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/dates/post/top', (req, res) => {
@@ -128,7 +128,7 @@ app.get('/api/v1/dates/post/top', (req, res) => {
       knex.raw('DATE(CONVERT_TZ(posts.created, "+00:00", "-04:00")) as date')
     )
     .then(rowsParser)
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/posts/top/:subreddit?', (req, res) => {
@@ -167,7 +167,7 @@ app.get('/api/v1/posts/top/:subreddit?', (req, res) => {
     )
     .then(rowsParser)
     .then((data) => data.map((row, index) => [index + 1, decodeURIComponent(row.title), row.subreddit, row.user_id, row.date, row.inches, row.permalink]))
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/users/comments/top', (req, res) => {
@@ -203,7 +203,7 @@ app.get('/api/v1/users/comments/top', (req, res) => {
     .then(rowsParser)
     .then((data) => [['User', 'Rangers Inches', 'Bruins Inches']]
       .concat(data.map((row) => [row.user_id, row.rangers_inches, row.bruins_inches])))
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/users/posts/top', (req, res) => {
@@ -239,7 +239,7 @@ app.get('/api/v1/users/posts/top', (req, res) => {
     .then((data) => [['User', 'Rangers Inches', 'Bruins Inches']].concat(data.map(
       (row) => [row.user_id, row.rangers_inches, row.bruins_inches]
     )))
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/user/:user_id', (req, res) => {
@@ -305,7 +305,7 @@ app.get('/api/v1/user/:user_id', (req, res) => {
         returnData.comments = data[0].inches * 10;
       })
   ])
-    .then(() => res.json(returnData));
+    .then(() => res.setHeader('Cache-Control', 'public, max-age=300') && res.json(returnData));
 });
 
 app.get('/api/v1/user/:user_id/posts', (req, res) => {
@@ -325,7 +325,7 @@ app.get('/api/v1/user/:user_id/posts', (req, res) => {
       'posts.title'
     )
     .then(rowsParser)
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
 app.get('/api/v1/subreddit', (req, res) => {
@@ -366,9 +366,12 @@ app.get('/api/v1/subreddit', (req, res) => {
 
       return dataTable;
     })
-    .then((data) => res.json(data));
+    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '/index.html')));
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.sendFile(path.join(__dirname, '/index.html'));
+});
 
 app.listen(8080);
