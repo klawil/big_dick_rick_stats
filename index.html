@@ -71,9 +71,9 @@
           <tr>
             <th>Rank</th>
             <th>Date</th>
-            <th>Rangers Inches</th>
-            <th>Bruins Inches</th>
-            <th>Total</th>
+            <th>Inches Gained</th>
+            <th>Subreddit</th>
+            <th>Event</th>
           </tr>
         </thead>
         <tbody id="date-table"></tbody>
@@ -121,6 +121,12 @@
             },
             alwaysOutside: true,
           },
+          series: {
+            2: {
+              color: 'transparent',
+              visibleInLegend: false
+            }
+          },
         };
         var chartData = google.visualization.arrayToDataTable(data);
         var chart = new google.visualization.BarChart(charts.dateTop);
@@ -144,9 +150,9 @@
         tables.date.innerHTML = tables.date.innerHTML + `<tr class="${rowClass}">
           <td>#${index}</td>
           <td>${row[0]}</td>
-          <td class="text-right">${formatter.formatValue(row[1])}</td>
-          <td class="text-right">${formatter.formatValue(row[2])}</td>
           <td class="text-right">${formatter.formatValue(row[2] + row[1])}</td>
+          <td class="text-right">${rowClass}</td>
+          <td>${row[5] === null ? '' : row[5]}</td>
         </tr>`;
       }));
 

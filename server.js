@@ -94,6 +94,11 @@ app.get('/api/v1/dates/comment/top', (req, res) => {
   var q = knex('comments as c1')
     .leftJoin('comments as c2', 'c1.comment_id', 'c2.parent_id')
     .leftJoin('posts as p', 'c1.post_id', 'p.post_id')
+    .leftJoin(
+      'annotations as a',
+      knex.raw('DATE(CONVERT_TZ(a.datetime, "+00:00", "-04:00"))'),
+      knex.raw('DATE(CONVERT_TZ(c1.created, "+00:00", "-04:00"))')
+    )
     .where('c2.user_id', 'BIG_DICK_RICK_BOT')
     .whereNotNull('c2.length');
 
@@ -110,10 +115,20 @@ app.get('/api/v1/dates/comment/top', (req, res) => {
     .select(
       knex.raw('DATE(CONVERT_TZ(c1.created, "+00:00", "-04:00")) as date'),
       knex.raw('SUM(CASE WHEN p.subreddit = "rangers" THEN 10 ELSE 0 END) as rangers_inches'),
-      knex.raw('SUM(CASE WHEN p.subreddit = "BostonBruins" THEN 10 ELSE 0 END) as bruins_inches')
+      knex.raw('SUM(CASE WHEN p.subreddit = "BostonBruins" THEN 10 ELSE 0 END) as bruins_inches'),
+      'a.annotation'
     )
     .then(rowsParser)
-    .then((data) => [['Date', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]].concat(data.map((row) => [row.date, row.rangers_inches, row.bruins_inches, row.inches])))
+    .then((data) => [['Date', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}, 'Event', {role: 'tooltip'}]].concat(data.map((row) => [
+      row.date,
+      row.rangers_inches,
+      row.bruins_inches,
+      row.inches,
+      row.annotation
+        ? 0
+        : null,
+      row.annotation
+    ])))
     .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
