@@ -155,7 +155,7 @@
       .then((data) => data.json())
       .then((data) => {
         var chartArray = [
-          ['Date', {role: 'annotation'}, 'In. Gained', 'Length', 'Event', {role: 'tooltip'}]
+          ['Date', 'In. Gained', 'Length', 'Event', {role: 'tooltip'}]
         ];
         var currentLength = 0;
         var lastDate = null;
@@ -173,7 +173,6 @@
             ) {
               chartArray.push([
                 (new Date(fillerDate)).toISOString().split('T')[0],
-                null,
                 0,
                 currentLength,
                 null,
@@ -189,9 +188,6 @@
           // Add to the array
           chartArray.push([
             row.date,
-            row.annotation !== null
-              ? ' '
-              : null,
             row.inches,
             currentLength,
             row.annotation !== null
