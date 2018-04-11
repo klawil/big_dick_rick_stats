@@ -106,7 +106,7 @@ knex('comments')
           }))
       )
       .catch((e) => e.code !== 'ER_DUP_ENTRY' && console.log(e)))))
-  .catch((e) => e.message !== 'No more comments' && console.log(e))
+  .catch((e) => e.message !== 'No more comments' && console.log(e.message))
   .finally(() => {
     knex.destroy();
   });
