@@ -23,12 +23,12 @@
   </style>
 </head>
 <body>
+  <h1 class="text-center">Rick Nash's Giant Dong in the 2017/18 Season</h1>
+  <div class="col-xs-12">
+    <h2 class="text-center">Graph</h2>
+    <div id="date-chart" style="height:500px;"></div>
+  </div>
   <div class="container">
-    <h1 class="text-center">Rick Nash's Giant Dong in the 2017/18 Season</h1>
-    <div class="col-xs-12">
-      <h2 class="text-center">Graph</h2>
-      <div id="date-chart"></div>
-    </div>
     <div class="col-xs-12">
       <h2 class="text-center">Charts</h2>
       <div id="subreddit-chart"></div>
@@ -103,6 +103,12 @@
           isStacked: true,
           focusTarget: 'category',
           colors: [ '#0038A8', '#FCB514' ],
+          annotations: {
+            textStyle: {
+              color: '#000',
+            },
+            alwaysOutside: true,
+          },
         };
         var chartData = google.visualization.arrayToDataTable(data);
         var chart = new google.visualization.BarChart(charts.dateTop);
@@ -149,7 +155,7 @@
       .then((data) => data.json())
       .then((data) => {
         var chartArray = [
-          ['Date', 'In. Gained', 'Length']
+          ['Date', {role: 'annotation'}, 'In. Gained', 'Length', 'Event', {role: 'tooltip'}]
         ];
         var currentLength = 0;
         var lastDate = null;
@@ -167,8 +173,11 @@
             ) {
               chartArray.push([
                 (new Date(fillerDate)).toISOString().split('T')[0],
+                null,
                 0,
-                currentLength
+                currentLength,
+                null,
+                null,
               ]);
             }
           }
@@ -180,8 +189,15 @@
           // Add to the array
           chartArray.push([
             row.date,
+            row.annotation !== null
+              ? ' '
+              : null,
             row.inches,
-            currentLength
+            currentLength,
+            row.annotation !== null
+              ? 0
+              : null,
+            row.annotation,
           ]);
         });
 
@@ -195,6 +211,10 @@
             },
             1: {
               targetAxisIndex: 1,
+            },
+            2: {
+              color: 'transparent',
+              visibleInLegend: false
             }
           },
           height: 400,
@@ -208,6 +228,13 @@
             }
           },
           focusTarget: 'category',
+          annotations: {
+            textStyle: {
+              color: '#000',
+            },
+            alwaysOutside: true,
+            style: 'line',
+          },
         };
         var chart = new google.visualization.LineChart(charts.date);
         chart.draw(chartData, options);
@@ -224,6 +251,12 @@
           },
           focusTarget: 'category',
           colors: [ '#FCB514', '#0038A8' ],
+          annotations: {
+            textStyle: {
+              color: '#000',
+            },
+            alwaysOutside: true,
+          },
         };
         var chart = new google.visualization.PieChart(charts.subreddit);
         chart.draw(data, options);
@@ -244,6 +277,12 @@
           colors: [ '#0038A8', '#FCB514' ],
           isStacked: true,
           focusTarget: 'category',
+          annotations: {
+            textStyle: {
+              color: '#000',
+            },
+            alwaysOutside: true,
+          },
         };
         var chart = new google.visualization.BarChart(charts.userComment);
         chart.draw(data, options);
@@ -264,6 +303,12 @@
           isStacked: true,
           focusTarget: 'category',
           colors: [ '#0038A8', '#FCB514' ],
+          annotations: {
+            textStyle: {
+              color: '#000',
+            },
+            alwaysOutside: true,
+          },
         };
         var chart = new google.visualization.BarChart(charts.userPost);
         chart.draw(data, options);

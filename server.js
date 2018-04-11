@@ -37,26 +37,29 @@ app.get('/api/v1/dates/comment', (req, res) => {
   };
 
   // Get the data by date
-  var q = knex('comments')
-    .where('user_id', 'BIG_DICK_RICK_BOT')
+  var q = knex('comments as c')
+    .leftJoin(
+      'annotations as a',
+      knex.raw('DATE(CONVERT_TZ(a.datetime, "+00:00", "-04:00"))'),
+      knex.raw('DATE(CONVERT_TZ(c.created, "+00:00", "-04:00"))')
+    )
+    .where('c.user_id', 'BIG_DICK_RICK_BOT')
     .whereNotNull('length');
 
-  if (constraints.start !== null && constraints.end !== null) {
+  if (constraints.start !== null) {
     q = q
-      .whereBetween(knex.raw('CONVERT_TZ(created, "+00:00", "-04:00")'), new Date(constraints.start), new Date(constraints.end));
-  } else if (constraints.start !== null) {
-    q = q
-      .whereRaw('CONVERT_TZ(created, "+00:00", "-04:00") >= FROM_UNIXTIME(?)', [(new Date(constraints.start)).getTime() / 1000]);
+      .whereRaw('CONVERT_TZ(c.created, "+00:00", "-04:00") >= FROM_UNIXTIME(?)', [(new Date(constraints.start)).getTime() / 1000]);
   }
 
   q
-    .groupByRaw('DATE(CONVERT_TZ(created, "+00:00", "-04:00"))')
-    .orderByRaw('DATE(CONVERT_TZ(created, "+00:00", "-04:00"))')
-    .countDistinct('comment_id as inches')
-    .countDistinct('post_id as posts')
+    .groupByRaw('DATE(CONVERT_TZ(c.created, "+00:00", "-04:00"))')
+    .orderByRaw('DATE(CONVERT_TZ(c.created, "+00:00", "-04:00"))')
+    .countDistinct('c.comment_id as inches')
+    .countDistinct('c.post_id as posts')
     .select(
-      knex.raw('DATE(CONVERT_TZ(created, "+00:00", "-04:00")) as date'),
-      knex.raw('MAX(length) as max_length')
+      knex.raw('DATE(CONVERT_TZ(c.created, "+00:00", "-04:00")) as date'),
+      knex.raw('MAX(c.length) as max_length'),
+      knex.raw('GROUP_CONCAT(DISTINCT a.annotation SEPARATOR ", ") as annotation')
     )
     .then(rowsParser)
     .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
@@ -110,7 +113,7 @@ app.get('/api/v1/dates/comment/top', (req, res) => {
       knex.raw('SUM(CASE WHEN p.subreddit = "BostonBruins" THEN 10 ELSE 0 END) as bruins_inches')
     )
     .then(rowsParser)
-    .then((data) => [['Date', 'Rangers Inches', 'Bruins Inches']].concat(data.map((row) => [row.date, row.rangers_inches, row.bruins_inches])))
+    .then((data) => [['Date', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]].concat(data.map((row) => [row.date, row.rangers_inches, row.bruins_inches, row.inches])))
     .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
@@ -201,8 +204,8 @@ app.get('/api/v1/users/comments/top', (req, res) => {
       knex.raw('SUM(CASE WHEN p.subreddit = "BostonBruins" THEN 10 ELSE 0 END) as bruins_inches')
     )
     .then(rowsParser)
-    .then((data) => [['User', 'Rangers Inches', 'Bruins Inches']]
-      .concat(data.map((row) => [row.user_id, row.rangers_inches, row.bruins_inches])))
+    .then((data) => [['User', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]]
+      .concat(data.map((row) => [row.user_id, row.rangers_inches, row.bruins_inches, row.inches])))
     .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
 
@@ -236,8 +239,8 @@ app.get('/api/v1/users/posts/top', (req, res) => {
       knex.raw('SUM(CASE WHEN posts.subreddit = "BostonBruins" THEN 10 ELSE 0 END) as bruins_inches')
     )
     .then(rowsParser)
-    .then((data) => [['User', 'Rangers Inches', 'Bruins Inches']].concat(data.map(
-      (row) => [row.user_id, row.rangers_inches, row.bruins_inches]
+    .then((data) => [['User', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]].concat(data.map(
+      (row) => [row.user_id, row.rangers_inches, row.bruins_inches, row.inches]
     )))
     .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
 });
