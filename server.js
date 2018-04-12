@@ -62,7 +62,7 @@ app.get('/api/v1/dates/comment', (req, res) => {
       knex.raw('GROUP_CONCAT(DISTINCT a.annotation SEPARATOR ", ") as annotation')
     )
     .then(rowsParser)
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/dates/post', (req, res) => {
@@ -79,7 +79,7 @@ app.get('/api/v1/dates/post', (req, res) => {
       knex.raw('DATE(CONVERT_TZ(posts.created, "+00:00", "-04:00")) as date')
     )
     .then(rowsParser)
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/dates/comment/top', (req, res) => {
@@ -129,7 +129,7 @@ app.get('/api/v1/dates/comment/top', (req, res) => {
         : null,
       row.annotation
     ])))
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/dates/post/top', (req, res) => {
@@ -146,7 +146,7 @@ app.get('/api/v1/dates/post/top', (req, res) => {
       knex.raw('DATE(CONVERT_TZ(posts.created, "+00:00", "-04:00")) as date')
     )
     .then(rowsParser)
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/posts/top/:subreddit?', (req, res) => {
@@ -185,7 +185,46 @@ app.get('/api/v1/posts/top/:subreddit?', (req, res) => {
     )
     .then(rowsParser)
     .then((data) => data.map((row, index) => [index + 1, decodeURIComponent(row.title), row.subreddit, row.user_id, row.date, row.inches, row.permalink]))
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
+});
+
+app.get('/api/v1/posts/bottom/:subreddit?', (req, res) => {
+  // Default the start date to the start of the 2018 season
+  var constraints = {
+    start: '2017-10-04',
+    end: null,
+    granularity: 'day',
+  };
+
+  var q = knex('posts')
+    .leftJoin('comments', 'posts.post_id', 'comments.post_id')
+    .where('comments.user_id', 'BIG_DICK_RICK_BOT')
+    .whereNull('comments.length');
+
+  if (typeof req.params.subreddit !== 'undefined') {
+    q = q.where('posts.subreddit', req.params.subreddit);
+  }
+
+  if (constraints.start !== null) {
+    q = q
+      .whereRaw('CONVERT_TZ(posts.created, "+00:00", "-04:00") >= FROM_UNIXTIME(?)', [(new Date(constraints.start)).getTime() / 1000]);
+  }
+
+  q
+    .groupBy('posts.post_id')
+    .orderBy('mentions', 'DESC')
+    .limit(10)
+    .count('comments.comment_id as mentions')
+    .select(
+      'posts.user_id',
+      'posts.permalink',
+      'posts.subreddit',
+      knex.raw('DATE(CONVERT_TZ(posts.created, "+00:00", "-04:00")) as date'),
+      'posts.title'
+    )
+    .then(rowsParser)
+    .then((data) => data.map((row, index) => [index + 1, decodeURIComponent(row.title), row.subreddit, row.user_id, row.date, row.mentions, row.permalink]))
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/users/comments/top', (req, res) => {
@@ -221,7 +260,44 @@ app.get('/api/v1/users/comments/top', (req, res) => {
     .then(rowsParser)
     .then((data) => [['User', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]]
       .concat(data.map((row) => [row.user_id, row.rangers_inches, row.bruins_inches, row.inches])))
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
+});
+
+app.get('/api/v1/users/comments/bottom', (req, res) => {
+  // Default the start date to the start of the 2018 season
+  var constraints = {
+    start: '2017-10-04',
+    end: null,
+    granularity: 'day',
+  };
+
+  var q = knex('comments as c1')
+    .leftJoin('comments as c2', 'c2.parent_id', 'c1.comment_id')
+    .leftJoin('posts as p', 'c1.post_id', 'p.post_id')
+    .where('c2.user_id', 'BIG_DICK_RICK_BOT')
+    .whereNot('c1.user_id', '[deleted]')
+    .whereNot('c1.user_id', 'BIG_DICK_RICK_BOT')
+    .whereNull('c2.length');
+
+  if (constraints.start !== null) {
+    q = q
+      .whereRaw('CONVERT_TZ(c1.created, "+00:00", "-04:00") >= FROM_UNIXTIME(?)', [(new Date(constraints.start)).getTime() / 1000]);
+  }
+
+  q = q
+    .countDistinct('c2.comment_id as mentions')
+    .groupBy('c1.user_id')
+    .orderBy('mentions', 'DESC')
+    .limit(10)
+    .select(
+      'c1.user_id',
+      knex.raw('SUM(CASE WHEN p.subreddit = "rangers" THEN 1 ELSE 0 END) as rangers_mentions'),
+      knex.raw('SUM(CASE WHEN p.subreddit = "BostonBruins" THEN 1 ELSE 0 END) as bruins_mentions')
+    )
+    .then(rowsParser)
+    .then((data) => [['User', 'Rangers Mentions', 'Bruins Mentions', {role: 'annotation'}]]
+      .concat(data.map((row) => [row.user_id, row.rangers_mentions, row.bruins_mentions, row.mentions])))
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/users/posts/top', (req, res) => {
@@ -245,9 +321,9 @@ app.get('/api/v1/users/posts/top', (req, res) => {
 
   q
     .groupBy('posts.user_id')
-    .orderByRaw('COUNT(comments.comment_id) DESC')
     .limit(10)
     .count('comments.comment_id as inches')
+    .orderBy('inches', 'DESC')
     .select(
       'posts.user_id',
       knex.raw('SUM(CASE WHEN posts.subreddit = "rangers" THEN 10 ELSE 0 END) as rangers_inches'),
@@ -257,7 +333,43 @@ app.get('/api/v1/users/posts/top', (req, res) => {
     .then((data) => [['User', 'Rangers Inches', 'Bruins Inches', {role: 'annotation'}]].concat(data.map(
       (row) => [row.user_id, row.rangers_inches, row.bruins_inches, row.inches]
     )))
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
+});
+
+app.get('/api/v1/users/posts/bottom', (req, res) => {
+  // Default the start date to the start of the 2018 season
+  var constraints = {
+    start: '2017-10-04',
+    end: null,
+    granularity: 'day',
+  };
+
+  var q = knex('posts')
+    .leftJoin('comments', 'posts.post_id', 'comments.post_id')
+    .where('comments.user_id', 'BIG_DICK_RICK_BOT')
+    .whereNull('comments.length')
+    .whereNot('posts.user_id', '[deleted]');
+
+  if (constraints.start !== null) {
+    q = q
+      .whereRaw('CONVERT_TZ(posts.created, "+00:00", "-04:00") >= FROM_UNIXTIME(?)', [(new Date(constraints.start)).getTime() / 1000]);
+  }
+
+  q
+    .groupBy('posts.user_id')
+    .limit(10)
+    .count('comments.comment_id as mentions')
+    .orderBy('mentions', 'DESC')
+    .select(
+      'posts.user_id',
+      knex.raw('SUM(CASE WHEN posts.subreddit = "rangers" THEN 1 ELSE 0 END) as rangers_mentions'),
+      knex.raw('SUM(CASE WHEN posts.subreddit = "BostonBruins" THEN 1 ELSE 0 END) as bruins_mentions')
+    )
+    .then(rowsParser)
+    .then((data) => [['User', 'Rangers Mentions', 'Bruins Mentions', {role: 'annotation'}]].concat(data.map(
+      (row) => [row.user_id, row.rangers_mentions, row.bruins_mentions, row.mentions]
+    )))
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/user/:user_id', (req, res) => {
@@ -343,7 +455,7 @@ app.get('/api/v1/user/:user_id/posts', (req, res) => {
       'posts.title'
     )
     .then(rowsParser)
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
 app.get('/api/v1/subreddit', (req, res) => {
@@ -384,12 +496,9 @@ app.get('/api/v1/subreddit', (req, res) => {
 
       return dataTable;
     })
-    .then((data) => {res.setHeader('Cache-Control', 'public, max-age=300'); res.json(data);});
+    .then((data) => res.json(data));
 });
 
-app.get('/', (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=300');
-  res.sendFile(path.join(__dirname, '/index.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '/index.html')));
 
 app.listen(8080);
