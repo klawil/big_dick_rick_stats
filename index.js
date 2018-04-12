@@ -1,8 +1,8 @@
 const snoowrap = require('snoowrap');
-
 const r = new snoowrap(require('./snoo.conf.js'));
-
 const knex = require('knex')(require('./knex.conf.js'));
+const fetch = require('node-fetch');
+const cloudflare = require('./cloudflare.conf.js');
 
 var post_inserts;
 var comment_inserts;
@@ -106,6 +106,17 @@ knex('comments')
           }))
       )
       .catch((e) => e.code !== 'ER_DUP_ENTRY' && console.log(e)))))
+  .then(() => fetch(`https://api.cloudflare.com/client/v4/zones/${cloudflare.zone}/purge_cache`, {
+      method: 'DELETE',
+      body: JSON.stringify({
+        purge_everything: true
+      }),
+      headers: {
+        'X-Auth-Email': cloudflare.email,
+        'X-Auth-Key': cloudflare.key,
+        'Content-Type': 'application/json'
+      },
+    }))
   .catch((e) => e.message !== 'No more comments' && console.log(e.message))
   .finally(() => {
     knex.destroy();
