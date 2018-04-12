@@ -1,3 +1,2 @@
 node_modules
-snoo.conf.js
-knex.conf.js
+*.conf.js
