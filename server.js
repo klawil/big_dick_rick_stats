@@ -2,6 +2,7 @@ const knex = require('knex')(require('./knex.conf.js'));
 const express = require('express');
 const app = express();
 const path = require('path');
+const fetch = require('node-fetch');
 
 function rowsParser(rows) {
   return rows.map(parseRow);
@@ -500,5 +501,55 @@ app.get('/api/v1/subreddit', (req, res) => {
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '/index.html')));
+
+app.get('/api/v1/game/:game_id/feed/live', (req, res) => {
+  fetch(`http://statsapi.web.nhl.com/api/v1/game/${req.params.game_id}/feed/live`)
+    .then((response) => response.json())
+    .then((data) => ({
+      gameData: {
+        teams: {
+          home: {
+            abbreviation: data.gameData.teams.home.abbreviation,
+          },
+          away: {
+            abbreviation: data.gameData.teams.away.abbreviation,
+          }
+        }
+      },
+      liveData: {
+        plays: {
+          allPlays: data.liveData.plays.allPlays
+            .filter((play) => play.result.eventTypeId === 'GOAL')
+            .map((play) => ({
+              result: {
+                eventCode: play.result.eventCode,
+                eventTypeId: play.result.eventTypeId,
+                emptyNet: play.result.emptyNet,
+                strength: {
+                  code: play.result.strength.code
+                }
+              },
+              players: play.players.map((player) => ({
+                player: {
+                  fullName: player.player.fullName
+                },
+                seasonTotal: player.seasonTotal,
+                playerType: player.playerType,
+              })),
+              about: {
+                goals: {
+                  away: play.about.goals.away,
+                  home: play.about.goals.home
+                },
+                periodTime: play.about.periodTime,
+                ordinalNum: play.about.ordinalNum
+              }
+            }))
+        }
+      }
+    }))
+    .then((data) => res.json(data))
+    .catch((e) => console.log(e) && res.json({success: false}));
+});
 
 app.listen(8080);
